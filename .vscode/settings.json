@@ -1,0 +1,22 @@
+{
+    "cmake.sourceDirectory": "D:/Projects/C++/Garbage_code/beam_panel",
+
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_fallbackStyle": "none",
+	"C_Cpp.formatting": "clangFormat",
+    "editor.formatOnSave": true,
+    "editor.detectIndentation": false,
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+
+    "files.exclude": {
+        "**/build": true
+    },
+    "C_Cpp.files.exclude": {
+        "**/build": true
+    },
+
+	"cmake.debugConfig": {
+    "console": "integratedTerminal"
+}
+}

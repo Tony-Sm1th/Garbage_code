@@ -1,0 +1,73 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# ===== Отступы =====
+IndentWidth: 4
+TabWidth: 4
+UseTab: Always              # "We using only tabs..."
+IndentCaseLabels: true      # case на один таб глубже switch
+
+# ===== Скобки =====
+BreakBeforeBraces: Allman   # { на новой строке для функций/if/for/while/class
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: false          # enum/struct/union — скобка на той же строке
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+# ===== Пробелы =====
+SpaceBeforeParens: Never    # без пробела перед ( у if/for/while/функций
+SpaceAfterCStyleCast: false
+SpaceBeforeRangeBasedForLoopColon: false
+SpaceInEmptyParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpacesInAngles: false
+
+# ===== Указатели =====
+PointerAlignment: Left      # uint8_t* ptr_val;
+DerivePointerAlignment: false
+
+# ===== Переносы строк =====
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# ===== Switch =====
+IndentCaseBlocks: false
+
+# ===== Комментарии =====
+ReflowComments: false
+CommentPragmas: '^ IWYU pragma:'
+
+# ===== Прочее =====
+SortIncludes: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+---
+
+# Отдельная секция для #define и макросов не требуется,
+# clang-format их не трогает по регистру (это задача разработчика).
+
+# Отдельная настройка для структур/enum/union:
+# clang-format не умеет различать "для struct скобка на той же строке,
+# а для class — на новой" через BraceWrapping.AfterClass / AfterStruct.
+# Значения выставлены так:
+#   AfterClass: true   → class my_class\n{
+#   AfterStruct: false → struct s_x {
+#   AfterEnum: false   → enum e_x {
+#   AfterUnion: false  → union u_x {
