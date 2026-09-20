@@ -3,7 +3,7 @@
 
 class QTabWidget;
 class MainTab;
-class beam_panel;
+class BeamPanel;
 
 class Widget : public QWidget
 {
@@ -19,5 +19,5 @@ class Widget : public QWidget
 
 	QTabWidget* m_tabs = nullptr;
 	MainTab* m_mainTab = nullptr;
-	beam_panel* m_beam_panel_tab = nullptr;
+	BeamPanel* m_beam_panel_tab = nullptr;
 };
