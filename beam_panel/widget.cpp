@@ -18,7 +18,6 @@ void Widget::buildUi()
 	m_tabs = new QTabWidget(this);
 	m_mainTab = new MainTab(m_tabs);
 	m_beam_panel_tab = new BeamPanel(m_tabs);
-
 	m_tabs->addTab(m_mainTab, tr("Main"));
 	m_tabs->addTab(m_beam_panel_tab, tr("Beam Panel"));
 }

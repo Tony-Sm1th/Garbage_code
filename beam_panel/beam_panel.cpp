@@ -13,7 +13,6 @@
 #include <QDebug>
 #include <QStackedWidget>
 #include <QSplitter>
-#include <iostream>
 
 BeamPanel::BeamPanel(QWidget* parent) : QWidget(parent)
 {
@@ -92,7 +91,6 @@ void BeamPanel::build_ui()
 	//group 4: Conversion
 	m_conversion_group = new QGroupBox(tr("Conversion"), this);
 	m_conversion_label = new QLabel(tr("Conversion interval"), m_conversion_group);
-
 	m_conversion_spin_box = new QSpinBox(m_conversion_group);
 	m_conversion_spin_box->setRange(DEFAULT_CONV_MIN_RANGE, DEFAULT_CONV_MAX_RANGE);
 	m_conversion_spin_box->setValue(DEFAULT_CONV_VALUE);
@@ -105,18 +103,14 @@ void BeamPanel::build_ui()
 	m_trigger_group = new QGroupBox(tr("Trigger"), this);
 	m_mode_trigger_label = new QLabel(tr("Trigger mode"), m_trigger_group);
 	m_mode_trigger_combo_box = new QComboBox(m_trigger_group);
-
 	m_mode_trigger_combo_box->addItem(tr("Hardware"), int(TriggerMode::Hardware));
 	m_mode_trigger_combo_box->addItem(tr("Software"), int(TriggerMode::Software));
-
 	m_mode_trigger_check_box = new QCheckBox(tr("Pulse mode"), m_trigger_group);
-
 	m_mode_trigger_level_label = new QLabel(tr("Level"), m_trigger_group);
 	m_mode_trigger_level_spin_box = new QSpinBox(m_trigger_group);
 	m_mode_trigger_level_spin_box->setRange(DEFAULT_LEVEL_MIN_RANGE, DEFAULT_LEVEL_MAX_RANGE);
 	m_mode_trigger_level_spin_box->setValue(DEFAULT_LEVEL_VALUE);
 	m_mode_trigger_level_spin_box->setSuffix(tr(" LSB"));
-
 	auto* trigger_layout = new QVBoxLayout(m_trigger_group);
 	trigger_layout->addWidget(m_mode_trigger_label);
 	trigger_layout->addWidget(m_mode_trigger_combo_box);
@@ -133,23 +127,29 @@ void BeamPanel::build_ui()
 	noise_background_layout->addWidget(m_noise_background_btn);
 	noise_background_layout->addWidget(m_noise_background_check_box);
 
-	//group 7: Commands
-	m_commands_group = new QGroupBox(tr("Commands"), this);
-	m_commands_send_btn = new QPushButton(tr("Set parameters"), m_commands_group);
-	m_commands_single_read_btn = new QPushButton(tr("Single read"), m_commands_group);
-	m_commands_continuous_read_label = new QLabel(tr("Continuous read"), m_commands_group);
-	m_commands_continuous_read_btn = new QPushButton(tr("Start"), m_commands_group);
-	m_commands_continuous_read_btn->setCheckable(true);
-	m_commands_spin_box = new QSpinBox(m_commands_group);
-	m_commands_spin_box->setRange(DEFAULT_COMMANDS_MIN_RANGE, DEFAULT_COMMANDS_MAX_RANGE);
-	m_commands_spin_box->setValue(DEFAULT_COMMANDS_VALUE);
-	m_commands_spin_box->setSuffix(tr(" ms"));
-	auto* commands_layout = new QVBoxLayout(m_commands_group);
-	commands_layout->addWidget(m_commands_send_btn);
-	commands_layout->addWidget(m_commands_single_read_btn);
-	commands_layout->addWidget(m_commands_continuous_read_label);
-	commands_layout->addWidget(m_commands_spin_box);
-	commands_layout->addWidget(m_commands_continuous_read_btn);
+	//group 7: Set parameters
+	m_parameters_send_group = new QGroupBox(tr("Set parameters"), this);
+	m_parameters_send_btn = new QPushButton(tr("Set"), m_parameters_send_group);
+	// Sets the background color to blue and text color to white
+	//m_parameters_send_btn->setStyleSheet("QPushButton { background-color: blue; color: white; }");
+	auto* parameters_layout = new QVBoxLayout(m_parameters_send_group);
+	parameters_layout->addWidget(m_parameters_send_btn);
+
+	//group 8: Reading
+	m_reading_group = new QGroupBox(tr("Reading"), this);
+	m_reading_single_read_btn = new QPushButton(tr("Single read"), m_reading_group);
+	m_reading_continuous_read_label = new QLabel(tr("Continuous read"), m_reading_group);
+	m_reading_continuous_read_btn = new QPushButton(tr("Start"), m_reading_group);
+	m_reading_continuous_read_btn->setCheckable(true);
+	m_reading_spin_box = new QSpinBox(m_reading_group);
+	m_reading_spin_box->setRange(DEFAULT_COMMANDS_MIN_RANGE, DEFAULT_COMMANDS_MAX_RANGE);
+	m_reading_spin_box->setValue(DEFAULT_COMMANDS_VALUE);
+	m_reading_spin_box->setSuffix(tr(" ms"));
+	auto* reading_layout = new QVBoxLayout(m_reading_group);
+	reading_layout->addWidget(m_reading_single_read_btn);
+	reading_layout->addWidget(m_reading_continuous_read_label);
+	reading_layout->addWidget(m_reading_spin_box);
+	reading_layout->addWidget(m_reading_continuous_read_btn);
 }
 
 void BeamPanel::build_layout()
@@ -189,10 +189,13 @@ void BeamPanel::build_layout()
 
 	//group 6
 	side_layout->addWidget(m_noise_background_group);
-	side_layout->addStretch();
 
 	//group 7
-	side_layout->addWidget(m_commands_group);
+	side_layout->addWidget(m_parameters_send_group);
+	side_layout->addStretch();
+
+	//group 8
+	side_layout->addWidget(m_reading_group);
 
 	//add right side
 	root_layout->addLayout(side_layout, 0);
@@ -201,14 +204,12 @@ void BeamPanel::build_layout()
 void BeamPanel::connect_signals()
 {
 	connect(m_view_group, &QButtonGroup::idClicked, this, &BeamPanel::on_view_changed);
-	connect(m_mode_trigger_combo_box, &QComboBox::currentIndexChanged, this,
-			&BeamPanel::on_trigger_mode_changed);
-	connect(m_mode_trigger_check_box, &QCheckBox::clicked, this,
-			&BeamPanel::on_trigger_mode_pulse_checked);
-	connect(m_noise_background_btn, &QPushButton::clicked, this,
-			&BeamPanel::on_noise_background_clicked);
-	connect(m_commands_continuous_read_btn, &QPushButton::toggled, this,
-			&BeamPanel::on_commands_continuous_read_toggled);
+	connect(m_parameters_send_btn, &QPushButton::clicked, this,
+			&BeamPanel::on_send_parameters_clicked);
+	connect(m_reading_single_read_btn, &QPushButton::clicked, this,
+			&BeamPanel::on_single_read_clicked);
+	connect(m_reading_continuous_read_btn, &QPushButton::toggled, this,
+			&BeamPanel::on_continuous_read_toggled);
 }
 
 void BeamPanel::on_view_changed(int a_id)
@@ -223,53 +224,50 @@ void BeamPanel::on_view_changed(int a_id)
 	qDebug() << "view changed to" << a_id;
 }
 
-// slot
-void BeamPanel::on_trigger_mode_changed(int index)
+void BeamPanel::on_send_parameters_clicked()
 {
-	//Q_UNUSED(index);
-	auto mode = TriggerMode(m_mode_trigger_combo_box->itemData(index).toInt());
-	switch(mode)
-	{
-		case TriggerMode::Hardware:
-			qDebug() << "hardware trigger";
-			break;
-		case TriggerMode::Software:
-			qDebug() << "software trigger";
-			break;
-	}
+	emit parameters_ready(parameters());
 }
 
-void BeamPanel::on_trigger_mode_pulse_checked(bool is_checked)
+void BeamPanel::on_single_read_clicked()
 {
-	//auto check_box_status = m_mode_trigger_check_box->isChecked();
-	if(is_checked)
+	emit single_read_requested();
+}
+
+void BeamPanel::on_continuous_read_toggled(bool on)
+{
+	if(on)
 	{
-		qDebug() << "Pulse mode ON";
+		m_reading_continuous_read_btn->setText("Stop");
+		emit continuous_read_requested(m_reading_spin_box->value());
 	}
 	else
 	{
-		qDebug() << "Pulse mode OFF";
+		m_reading_continuous_read_btn->setText("Start");
+		emit continuous_read_stopped();
 	}
 }
+
 void BeamPanel::on_noise_background_clicked()
 {
-	qDebug() << "Accum is pushed";
-}
-
-void BeamPanel::on_commands_continuous_read_toggled(bool is_toggled)
-{
-	if(is_toggled)
-	{
-		m_commands_continuous_read_btn->setText(tr("Stop"));
-	}
-	else
-	{
-		m_commands_continuous_read_btn->setText(tr("Start"));
-	}
+	emit noise_accumulation_requested();
 }
 
 void BeamPanel::set_center_of_gravity(double a_value)
 {
 	m_cog_value = a_value;
 	m_center_of_gravity_label->setText(QString::number(m_cog_value, 'f', 2));
+}
+
+BeamPanel::BeamParameters BeamPanel::parameters() const
+{
+	BeamParameters p;
+	p.capacitor = Capacitor(m_capacitor_combo_box->currentData().toInt());
+	p.conversion_us = m_conversion_spin_box->value();
+	p.trigger_mode = TriggerMode(m_mode_trigger_combo_box->currentData().toInt());
+	p.trigger_pulse = m_mode_trigger_check_box->isChecked();
+	p.trigger_level_lsb = m_mode_trigger_level_spin_box->value();
+	p.noise_cancellation = m_noise_background_check_box->isChecked();
+	p.read_interval_ms = m_reading_spin_box->value();
+	return p;
 }
