@@ -5,7 +5,7 @@ project(test_app VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport)
 
 qt_standard_project_setup()
 
@@ -14,12 +14,17 @@ qt_add_executable(test_app
     widget.cpp
     maintab.cpp
     beam_panel.cpp
+	histogram_plot.cpp
+	qcustomplot.cpp
     widget.h
     maintab.h
     beam_panel.h
+	histogram_plot.h
+	qcustomplot.h
+
 )
 
-target_link_libraries(test_app PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(test_app PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::PrintSupport)
 
 set_target_properties(test_app PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}

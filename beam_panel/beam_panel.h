@@ -14,6 +14,7 @@
 
 #include <QWidget>
 #include <QList>
+#include <QVector>
 #include <QMetaType>
 
 class QTextEdit;
@@ -26,6 +27,9 @@ class QComboBox;
 class QCheckBox;
 class QLabel;
 class QStackedWidget;
+class QSplitter;
+
+class HistogramPlot;
 
 class BeamPanel : public QWidget
 {
@@ -59,6 +63,12 @@ class BeamPanel : public QWidget
 		int read_interval_ms = DEFAULT_COMMANDS_VALUE;
 	};
 
+	struct Histograms
+	{
+		QVector<int> a;
+		QVector<int> b;
+	};
+
 	explicit BeamPanel(QWidget* a_parent = nullptr);
 	~BeamPanel() override = default;
 
@@ -72,6 +82,7 @@ class BeamPanel : public QWidget
 	void noise_accumulation_requested();
 
   public slots:
+	void on_histograms_ready(const BeamPanel::Histograms& a_hist);
 	// void on_parameters_applied(const BeamPanel::BeamParameters& a_params);
 	// void on_error(const QString& a_message);
 
@@ -84,10 +95,17 @@ class BeamPanel : public QWidget
 
   private:
 	QStackedWidget* m_stack = nullptr;
-	QTextEdit* m_view_a = nullptr;
-	QTextEdit* m_view_b = nullptr;
-	QWidget* m_view_split = nullptr;
-	QTextEdit* m_view_sum = nullptr;
+
+	HistogramPlot* m_hist_a = nullptr; // page 0
+	HistogramPlot* m_hist_b = nullptr; // page 1
+	QSplitter* m_view_split = nullptr; // page 2
+	HistogramPlot* m_hist_split_a = nullptr;
+	HistogramPlot* m_hist_split_b = nullptr;
+	HistogramPlot* m_hist_sum = nullptr; // page 3
+
+	QVector<int> m_data_a;
+	QVector<int> m_data_b;
+	QVector<int> m_data_sum;
 
 	QList<QToolButton*> m_view_buttons;
 	QButtonGroup* m_view_group = nullptr;
@@ -127,4 +145,7 @@ class BeamPanel : public QWidget
 	void build_layout();
 	void connect_signals();
 	void set_center_of_gravity(double a_value);
+	void update_histograms();
 };
+
+Q_DECLARE_METATYPE(BeamPanel::Histograms)

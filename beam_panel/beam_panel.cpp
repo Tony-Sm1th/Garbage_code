@@ -1,4 +1,5 @@
 #include "beam_panel.h"
+#include "histogram_plot.h"
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QTextEdit>
@@ -26,31 +27,30 @@ void BeamPanel::build_ui()
 	//left side
 	m_stack = new QStackedWidget(this);
 
-	// page 0: view A
-	m_view_a = new QTextEdit(m_stack);
-	m_view_a->setPlainText("View A");
-	m_stack->addWidget(m_view_a);
+	// page 0: A
+	m_hist_a = new HistogramPlot(m_stack);
+	m_hist_a->setTitle(tr("View A"));
+	m_stack->addWidget(m_hist_a);
 
-	// page 1: view B
-	m_view_b = new QTextEdit(m_stack);
-	m_view_b->setPlainText("View B");
-	m_stack->addWidget(m_view_b);
+	// page 1: B
+	m_hist_b = new HistogramPlot(m_stack);
+	m_hist_b->setTitle(tr("View B"));
+	m_stack->addWidget(m_hist_b);
 
 	// page 2: split A (top) + B (bottom)
-	auto* split = new QSplitter(Qt::Vertical, m_stack);
-	auto* split_a = new QTextEdit(split);
-	split_a->setPlainText("Split — A");
-	auto* split_b = new QTextEdit(split);
-	split_b->setPlainText("Split — B");
-	split->addWidget(split_a);
-	split->addWidget(split_b);
-	m_view_split = split;
+	m_view_split = new QSplitter(Qt::Vertical, m_stack);
+	m_hist_split_a = new HistogramPlot(m_view_split);
+	m_hist_split_a->setTitle(tr("A"));
+	m_hist_split_b = new HistogramPlot(m_view_split);
+	m_hist_split_b->setTitle(tr("B"));
+	m_view_split->addWidget(m_hist_split_a);
+	m_view_split->addWidget(m_hist_split_b);
 	m_stack->addWidget(m_view_split);
 
 	// page 3: sum
-	m_view_sum = new QTextEdit(m_stack);
-	m_view_sum->setPlainText("Sum A + B");
-	m_stack->addWidget(m_view_sum);
+	m_hist_sum = new HistogramPlot(m_stack);
+	m_hist_sum->setTitle(tr("Sum A + B"));
+	m_stack->addWidget(m_hist_sum);
 
 	m_stack->setCurrentIndex(0); // по умолчанию — view A
 
@@ -270,4 +270,29 @@ BeamPanel::BeamParameters BeamPanel::parameters() const
 	p.noise_cancellation = m_noise_background_check_box->isChecked();
 	p.read_interval_ms = m_reading_spin_box->value();
 	return p;
+}
+
+void BeamPanel::on_histograms_ready(const Histograms& a_hist)
+{
+	if(!a_hist.a.isEmpty())
+		m_data_a = a_hist.a;
+	if(!a_hist.b.isEmpty())
+		m_data_b = a_hist.b;
+	Q_ASSERT(m_data_a.size() == m_data_b.size());
+
+	const int n = m_data_a.size();
+	m_data_sum.resize(n);
+	for(int i = 0; i < n; ++i)
+		m_data_sum[i] = m_data_a[i] + m_data_b[i];
+
+	update_histograms();
+}
+
+void BeamPanel::update_histograms()
+{
+	m_hist_a->setData(m_data_a);
+	m_hist_b->setData(m_data_b);
+	m_hist_split_a->setData(m_data_a);
+	m_hist_split_b->setData(m_data_b);
+	m_hist_sum->setData(m_data_sum);
 }
