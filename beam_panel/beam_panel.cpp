@@ -73,10 +73,14 @@ void BeamPanel::build_ui()
 	m_view_buttons[0]->setChecked(true); // default button
 
 	//group 2: Center of gravity
-	m_center_of_gravity_group = new QGroupBox(tr("Center of gravity"), this);
-	m_center_of_gravity_label = new QLabel(tr("--"), m_center_of_gravity_group);
+	m_center_of_gravity_group = new QGroupBox(tr("Parameters"), this);
+
+	m_current_label = new QLabel(tr("--"), m_center_of_gravity_group);
+	m_current_label->setTextFormat(Qt::PlainText); // no HTML interpretation
+	m_current_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+
 	auto* cog_layout = new QVBoxLayout(m_center_of_gravity_group);
-	cog_layout->addWidget(m_center_of_gravity_label);
+	cog_layout->addWidget(m_current_label);
 
 	//group 3: Select capacitor
 	m_capacitor_group = new QGroupBox(tr("Charge in capacitor"), this);
@@ -294,6 +298,7 @@ void BeamPanel::on_histograms_ready(const Histograms& a_hist)
 		m_data_sum[i] = m_data_a[i] + m_data_b[i];
 
 	update_histograms();
+	update_parameter_labels();
 }
 
 void BeamPanel::update_histograms()
@@ -316,6 +321,7 @@ void BeamPanel::apply_current_scale_to_plots()
 	m_hist_b->setCurrentScale(charge_pC, conv_us);
 	m_hist_split_a->setCurrentScale(charge_pC, conv_us);
 	m_hist_split_b->setCurrentScale(charge_pC, conv_us);
+	update_parameter_labels();
 }
 
 double BeamPanel::charge_from_capacitor(Capacitor a_cap)
@@ -332,4 +338,34 @@ double BeamPanel::charge_from_capacitor(Capacitor a_cap)
 			return 150.0;
 	}
 	return 0.0;
+}
+
+void BeamPanel::update_parameter_labels()
+{
+	const auto p = parameters();
+	const double Q = charge_from_capacitor(p.capacitor);
+	const double t = p.conversion_us;
+
+	if(t <= 0.0)
+	{
+		m_current_label->setText("--");
+		return;
+	}
+
+	const double k_nA = (Q / t) * 1000.0 / (65535.0 - ADC_OFFSET_LSB);
+
+	double sum_a = 0.0, sum_b = 0.0;
+	for(int v: m_data_a)
+		sum_a += (v - ADC_OFFSET_LSB) * k_nA;
+	for(int v: m_data_b)
+		sum_b += (v - ADC_OFFSET_LSB) * k_nA;
+
+	const QString text = QString("I_X:   %1 nA\n"
+								 "I_Y:   %2 nA\n"
+								 "I_sum: %3 nA")
+							 .arg(sum_a, 0, 'f', 3)
+							 .arg(sum_b, 0, 'f', 3)
+							 .arg(sum_a + sum_b, 0, 'f', 3);
+
+	m_current_label->setText(text);
 }

@@ -1,4 +1,5 @@
 #pragma once
+#define ADC_OFFSET_LSB 250
 
 #include "qcustomplot.h"
 #include <QVector>

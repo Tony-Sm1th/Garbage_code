@@ -102,9 +102,8 @@ void HistogramPlot::update_right_axis_labels()
 	for(int i = 0; i < tick_count; ++i)
 	{
 		const double adc = range.lower + step * i;
-		const double current_nA = adc * m_current_k;
-
-		ticker->addTick(adc, QString::number(current_nA, 'f', 2));
+		const double current_nA = (adc - ADC_OFFSET_LSB) * m_current_k;
+		ticker->addTick(adc, QString::number(current_nA, 'f', 3));
 	}
 
 	m_axis_right->setTicker(ticker);
@@ -118,11 +117,13 @@ void HistogramPlot::setCurrentScale(double a_charge_pC, double a_conversion_us)
 		return;
 	}
 
-	// I_max [uA] = Q [pC] / t [us]
-	const double i_max = a_charge_pC / a_conversion_us;
+	// I_max [тA] = Q [pC] / t [us] * 1000
+	const double i_max_nA = a_charge_pC / a_conversion_us * 1000;
 
-	// per one ADC count
-	m_current_k = i_max / 65535.0 * 1000;
+	// ADC range that corresponds to [0 .. I_max] is (65535 - offset)
+	const double adc_span = 65535.0 - double(ADC_OFFSET_LSB);
+
+	m_current_k = i_max_nA / adc_span;
 
 	// if you show the right axis, update its labels here
 	update_right_axis_labels();

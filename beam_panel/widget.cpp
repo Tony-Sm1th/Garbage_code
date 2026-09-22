@@ -35,9 +35,17 @@ void Widget::buildLayout()
 
 void Widget::connectSignals()
 {
+	// commands: BeamPanel -> DataEmulator
+	connect(m_beam_panel_tab, &BeamPanel::single_read_requested, m_emulator,
+			&DataEmulator::on_single_read_requested);
+
+	connect(m_beam_panel_tab, &BeamPanel::continuous_read_requested, m_emulator,
+			&DataEmulator::on_continuous_read_requested);
+
+	connect(m_beam_panel_tab, &BeamPanel::continuous_read_stopped, m_emulator,
+			&DataEmulator::on_continuous_read_stopped);
+
+	// data: DataEmulator -> BeamPanel
 	connect(m_emulator, &DataEmulator::histograms_ready, m_beam_panel_tab,
 			&BeamPanel::on_histograms_ready);
-
-	// start: once per second
-	m_emulator->start(1000);
 }

@@ -12,6 +12,8 @@
 #define DEFAULT_COMMANDS_MIN_RANGE 1	   // ms
 #define DEFAULT_COMMANDS_MAX_RANGE 2000000 // ms
 
+#define ADC_OFFSET_LSB 250
+
 #include <QWidget>
 #include <QList>
 #include <QVector>
@@ -114,6 +116,7 @@ class BeamPanel : public QWidget
 	double m_cog_value = 0.0;
 	QGroupBox* m_center_of_gravity_group = nullptr;
 	QLabel* m_center_of_gravity_label = nullptr;
+	QLabel* m_current_label = nullptr;
 
 	QGroupBox* m_capacitor_group = nullptr;
 	QComboBox* m_capacitor_combo_box = nullptr;
@@ -147,6 +150,7 @@ class BeamPanel : public QWidget
 	void connect_signals();
 	void set_center_of_gravity(double a_value);
 	void update_histograms();
+	void update_parameter_labels();
 	//for histogram current axis
 	double charge_from_capacitor(Capacitor a_cap);
 };
