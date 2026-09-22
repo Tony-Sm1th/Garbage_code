@@ -92,6 +92,7 @@ class BeamPanel : public QWidget
 	void on_send_parameters_clicked();
 	void on_single_read_clicked();
 	void on_continuous_read_toggled(bool a_on);
+	void apply_current_scale_to_plots();
 
   private:
 	QStackedWidget* m_stack = nullptr;
@@ -146,6 +147,8 @@ class BeamPanel : public QWidget
 	void connect_signals();
 	void set_center_of_gravity(double a_value);
 	void update_histograms();
+	//for histogram current axis
+	double charge_from_capacitor(Capacitor a_cap);
 };
 
 Q_DECLARE_METATYPE(BeamPanel::Histograms)

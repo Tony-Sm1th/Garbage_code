@@ -4,6 +4,7 @@
 class QTabWidget;
 class MainTab;
 class BeamPanel;
+class DataEmulator; // forward declaration
 
 class Widget : public QWidget
 {
@@ -20,4 +21,5 @@ class Widget : public QWidget
 	QTabWidget* m_tabs = nullptr;
 	MainTab* m_mainTab = nullptr;
 	BeamPanel* m_beam_panel_tab = nullptr;
+	DataEmulator* m_emulator = nullptr;
 };

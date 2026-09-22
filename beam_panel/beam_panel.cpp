@@ -20,6 +20,8 @@ BeamPanel::BeamPanel(QWidget* parent) : QWidget(parent)
 	build_ui();
 	build_layout();
 	connect_signals();
+	//make current in accordance with capacitor and time interval
+	apply_current_scale_to_plots();
 }
 
 void BeamPanel::build_ui()
@@ -53,7 +55,6 @@ void BeamPanel::build_ui()
 	m_stack->addWidget(m_hist_sum);
 
 	m_stack->setCurrentIndex(0); // по умолчанию — view A
-
 	//group 1: four view buttons
 	m_view_group = new QButtonGroup(this);
 	m_view_group->setExclusive(true); // only one active
@@ -210,6 +211,13 @@ void BeamPanel::connect_signals()
 			&BeamPanel::on_single_read_clicked);
 	connect(m_reading_continuous_read_btn, &QPushButton::toggled, this,
 			&BeamPanel::on_continuous_read_toggled);
+
+	//calls for histogram plot
+	connect(m_capacitor_combo_box, qOverload<int>(&QComboBox::currentIndexChanged), this,
+			&BeamPanel::apply_current_scale_to_plots);
+
+	connect(m_conversion_spin_box, qOverload<int>(&QSpinBox::valueChanged), this,
+			&BeamPanel::apply_current_scale_to_plots);
 }
 
 void BeamPanel::on_view_changed(int a_id)
@@ -295,4 +303,33 @@ void BeamPanel::update_histograms()
 	m_hist_split_a->setData(m_data_a);
 	m_hist_split_b->setData(m_data_b);
 	m_hist_sum->setData(m_data_sum);
+}
+
+void BeamPanel::apply_current_scale_to_plots()
+{
+	const auto p = parameters();
+
+	const double charge_pC = charge_from_capacitor(p.capacitor);
+	const double conv_us = p.conversion_us;
+
+	m_hist_a->setCurrentScale(charge_pC, conv_us);
+	m_hist_b->setCurrentScale(charge_pC, conv_us);
+	m_hist_split_a->setCurrentScale(charge_pC, conv_us);
+	m_hist_split_b->setCurrentScale(charge_pC, conv_us);
+}
+
+double BeamPanel::charge_from_capacitor(Capacitor a_cap)
+{
+	switch(a_cap)
+	{
+		case Capacitor::C12p5:
+			return 12.5;
+		case Capacitor::C50:
+			return 50.0;
+		case Capacitor::C100:
+			return 100.0;
+		case Capacitor::C150:
+			return 150.0;
+	}
+	return 0.0;
 }

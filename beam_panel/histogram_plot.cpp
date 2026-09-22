@@ -8,7 +8,7 @@ HistogramPlot::HistogramPlot(QWidget* parent) : QCustomPlot(parent)
 	setup_bars();
 
 	setMinimumHeight(150);
-	setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+	//setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
 }
 
 void HistogramPlot::setup_axes()
@@ -22,7 +22,10 @@ void HistogramPlot::setup_axes()
 	m_axis_y->setLabel(tr("ADC"));
 
 	m_axis_x->setRange(0, 128);
-	m_axis_y->setRange(0, 100);
+	m_axis_y->setRange(0, 65535);
+
+	m_axis_right = m_axis_rect->addAxis(QCPAxis::atRight);
+	m_axis_right->setLabel(tr("Current, nA"));
 
 	// hide ticks and labels on X for now
 	m_axis_x->setTickLabels(false);
@@ -82,6 +85,47 @@ void HistogramPlot::rebuild()
 		const double max_value = *std::max_element(values.begin(), values.end());
 		m_axis_y->setRange(0, max_value * 1.1);
 	}
+	m_axis_right->setRange(m_axis_y->range());
+	update_right_axis_labels();
+
+	replot();
+}
+
+void HistogramPlot::update_right_axis_labels()
+{
+	auto ticker = QSharedPointer<QCPAxisTickerText>::create();
+
+	const QCPRange range = m_axis_y->range();
+	const int tick_count = 6;
+	const double step = (range.upper - range.lower) / (tick_count - 1);
+
+	for(int i = 0; i < tick_count; ++i)
+	{
+		const double adc = range.lower + step * i;
+		const double current_nA = adc * m_current_k;
+
+		ticker->addTick(adc, QString::number(current_nA, 'f', 2));
+	}
+
+	m_axis_right->setTicker(ticker);
+}
+
+void HistogramPlot::setCurrentScale(double a_charge_pC, double a_conversion_us)
+{
+	if(a_conversion_us <= 0.0)
+	{
+		m_current_k = 0.0;
+		return;
+	}
+
+	// I_max [uA] = Q [pC] / t [us]
+	const double i_max = a_charge_pC / a_conversion_us;
+
+	// per one ADC count
+	m_current_k = i_max / 65535.0 * 1000;
+
+	// if you show the right axis, update its labels here
+	update_right_axis_labels();
 
 	replot();
 }

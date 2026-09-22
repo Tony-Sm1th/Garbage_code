@@ -1,6 +1,8 @@
 #include "widget.h"
 #include "maintab.h"
 #include "beam_panel.h"
+#include "data_emulator.h"
+
 #include <QtWidgets>
 
 Widget::Widget(QWidget* parent) : QWidget(parent)
@@ -20,6 +22,8 @@ void Widget::buildUi()
 	m_beam_panel_tab = new BeamPanel(m_tabs);
 	m_tabs->addTab(m_mainTab, tr("Main"));
 	m_tabs->addTab(m_beam_panel_tab, tr("Beam Panel"));
+	// create the emulator (owned by this widget)
+	m_emulator = new DataEmulator(this);
 }
 
 void Widget::buildLayout()
@@ -31,5 +35,9 @@ void Widget::buildLayout()
 
 void Widget::connectSignals()
 {
-	// пока пусто; здесь будут connect'ы
+	connect(m_emulator, &DataEmulator::histograms_ready, m_beam_panel_tab,
+			&BeamPanel::on_histograms_ready);
+
+	// start: once per second
+	m_emulator->start(1000);
 }

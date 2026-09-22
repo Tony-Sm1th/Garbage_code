@@ -16,11 +16,13 @@ qt_add_executable(test_app
     beam_panel.cpp
 	histogram_plot.cpp
 	qcustomplot.cpp
+	data_emulator.cpp
     widget.h
     maintab.h
     beam_panel.h
 	histogram_plot.h
 	qcustomplot.h
+	data_emulator.h
 
 )
 
