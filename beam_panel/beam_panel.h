@@ -94,7 +94,10 @@ class BeamPanel : public QWidget
 	void on_send_parameters_clicked();
 	void on_single_read_clicked();
 	void on_continuous_read_toggled(bool a_on);
+	//histogram_plot
 	void apply_current_scale_to_plots();
+	void on_bar_hovered(int a_index, int a_adc, double a_current_nA);
+	void on_bar_unhovered();
 
   private:
 	QStackedWidget* m_stack = nullptr;
@@ -117,6 +120,8 @@ class BeamPanel : public QWidget
 	QGroupBox* m_center_of_gravity_group = nullptr;
 	QLabel* m_center_of_gravity_label = nullptr;
 	QLabel* m_current_label = nullptr;
+	QString m_current_text; // text of the total currents
+	QString m_hover_text;	// text of the hovered bar (empty when not hovering)
 
 	QGroupBox* m_capacitor_group = nullptr;
 	QComboBox* m_capacitor_combo_box = nullptr;
@@ -153,6 +158,7 @@ class BeamPanel : public QWidget
 	void update_parameter_labels();
 	//for histogram current axis
 	double charge_from_capacitor(Capacitor a_cap);
+	void refresh_current_label(); // helper: m_current_label->setText(current + hover)
 };
 
 Q_DECLARE_METATYPE(BeamPanel::Histograms)

@@ -28,17 +28,33 @@ void HistogramPlot::setup_axes()
 	m_axis_right->setLabel(tr("Current, nA"));
 
 	// hide ticks and labels on X for now
-	m_axis_x->setTickLabels(false);
+	//m_axis_x->setTickLabels(false);
+	auto ticker = QSharedPointer<QCPAxisTickerFixed>::create();
+	ticker->setTickStep(16.0);
+	ticker->setScaleStrategy(QCPAxisTickerFixed::ssNone);
+	m_axis_x->setTicker(ticker);
+	m_axis_x->setTickLabels(true);
 }
 
 void HistogramPlot::setup_bars()
 {
 	m_bars = new QCPBars(m_axis_x, m_axis_y);
 
-	// bar width in X-axis units
+	// Bar width
 	m_bars->setWidth(0.8);
+
+	// Normal bars — clean medium blue
 	m_bars->setPen(Qt::NoPen);
-	m_bars->setBrush(QColor(70, 130, 180));
+	m_bars->setBrush(QColor(65, 130, 190)); // #4182BE
+
+	// Single-bar selection
+	m_bars->setSelectable(QCP::stSingleData);
+
+	// Selection style
+	QCPSelectionDecorator* deco = m_bars->selectionDecorator();
+
+	deco->setPen(QPen(QColor(248, 138, 29), 2.5)); // rgb(248, 138, 29)
+	deco->setBrush(QBrush(QColor(255, 179, 26)));  // rgb(255, 179, 26)
 }
 
 void HistogramPlot::setData(const QVector<int>& a_values)
@@ -129,4 +145,59 @@ void HistogramPlot::setCurrentScale(double a_charge_pC, double a_conversion_us)
 	update_right_axis_labels();
 
 	replot();
+}
+
+void HistogramPlot::mouseMoveEvent(QMouseEvent* a_event)
+{
+	QCustomPlot::mouseMoveEvent(a_event);
+
+	if(m_values.isEmpty())
+		return;
+
+	const double x_data = m_axis_x->pixelToCoord(a_event->pos().x());
+	const int index = int(std::floor(x_data));
+
+	// out of range: unhover
+	if(index < 0 || index >= m_values.size())
+	{
+		if(m_hovered_index != -1)
+		{
+			m_hovered_index = -1;
+			m_bars->setSelection(QCPDataSelection());
+			replot();
+			emit bar_unhovered();
+		}
+		return;
+	}
+
+	// same index: nothing to do
+	if(index == m_hovered_index)
+		return;
+
+	// new hovered index
+	m_hovered_index = index;
+
+	// highlight via selection
+	m_bars->setSelection(QCPDataSelection(QCPDataRange(index, index + 1)));
+
+	// compute values
+	const int adc = m_values[index];
+	const double current_nA = (adc - ADC_OFFSET_LSB) * m_current_k;
+
+	emit bar_hovered(index + X_POS_OFFSET, adc, current_nA);
+
+	replot();
+}
+
+void HistogramPlot::leaveEvent(QEvent* a_event)
+{
+	QCustomPlot::leaveEvent(a_event);
+
+	if(m_hovered_index != -1)
+	{
+		m_hovered_index = -1;
+		m_bars->setSelection(QCPDataSelection());
+		replot();
+		emit bar_unhovered();
+	}
 }

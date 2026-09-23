@@ -78,6 +78,9 @@ void BeamPanel::build_ui()
 	m_current_label = new QLabel(tr("--"), m_center_of_gravity_group);
 	m_current_label->setTextFormat(Qt::PlainText); // no HTML interpretation
 	m_current_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+	m_hover_text = QString("Position: --\n"
+						   "ADC:      --\n"
+						   "Current:  -- nA");
 
 	auto* cog_layout = new QVBoxLayout(m_center_of_gravity_group);
 	cog_layout->addWidget(m_current_label);
@@ -222,6 +225,18 @@ void BeamPanel::connect_signals()
 
 	connect(m_conversion_spin_box, qOverload<int>(&QSpinBox::valueChanged), this,
 			&BeamPanel::apply_current_scale_to_plots);
+	//hover mouse
+	auto connect_hover = [this](HistogramPlot* plot)
+	{
+		connect(plot, &HistogramPlot::bar_hovered, this, &BeamPanel::on_bar_hovered);
+		connect(plot, &HistogramPlot::bar_unhovered, this, &BeamPanel::on_bar_unhovered);
+	};
+
+	connect_hover(m_hist_a);
+	connect_hover(m_hist_b);
+	connect_hover(m_hist_split_a);
+	connect_hover(m_hist_split_b);
+	connect_hover(m_hist_sum);
 }
 
 void BeamPanel::on_view_changed(int a_id)
@@ -348,7 +363,8 @@ void BeamPanel::update_parameter_labels()
 
 	if(t <= 0.0)
 	{
-		m_current_label->setText("--");
+		m_current_text = "I_X:   --\nI_Y:   --\nI_sum: --";
+		refresh_current_label();
 		return;
 	}
 
@@ -367,5 +383,33 @@ void BeamPanel::update_parameter_labels()
 							 .arg(sum_b, 0, 'f', 3)
 							 .arg(sum_a + sum_b, 0, 'f', 3);
 
-	m_current_label->setText(text);
+	m_current_text = text;
+	refresh_current_label();
+}
+
+void BeamPanel::on_bar_hovered(int a_index, int a_adc, double a_current_nA)
+{
+	const int pos_mm_dummy = a_index; // placeholder
+
+	m_hover_text = QString("Position: %1\n"
+						   "ADC:      %2\n"
+						   "Current:  %3 nA")
+					   .arg(pos_mm_dummy)
+					   .arg(a_adc)
+					   .arg(a_current_nA, 0, 'f', 3);
+
+	refresh_current_label();
+}
+
+void BeamPanel::on_bar_unhovered()
+{
+	m_hover_text = QString("Position: --\n"
+						   "ADC:      --\n"
+						   "Current:  -- nA");
+	refresh_current_label();
+}
+
+void BeamPanel::refresh_current_label()
+{
+	m_current_label->setText(m_current_text + "\n\n" + m_hover_text);
 }
