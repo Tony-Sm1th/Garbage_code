@@ -14,6 +14,10 @@
 
 #define ADC_OFFSET_LSB 250
 
+#define DEFAULT_VIEW 2 // default view for splitter
+
+#define MIN_PANEL_WIDTH 600 //minimal panel width
+
 #include <QWidget>
 #include <QList>
 #include <QVector>
@@ -32,6 +36,7 @@ class QStackedWidget;
 class QSplitter;
 
 class HistogramPlot;
+class HeatmapPlot;
 
 class BeamPanel : public QWidget
 {
@@ -96,18 +101,32 @@ class BeamPanel : public QWidget
 	void on_continuous_read_toggled(bool a_on);
 	//histogram_plot
 	void apply_current_scale_to_plots();
-	void on_bar_hovered(int a_index, int a_adc, double a_current_nA);
-	void on_bar_unhovered();
 
   private:
+	enum class HoverSource
+	{
+		None,
+		HistA,
+		HistB,
+		Heatmap
+	};
+
+	HoverSource m_hover_source = HoverSource::None;
+	int m_hover_index = -1; // channel for HistA / HistB
+	int m_hover_ix = -1;	// X channel for Heatmap
+	int m_hover_iy = -1;	// Y channel for Heatmap
+
+	enum class ViewMode
+	{
+		Bars = 0,
+		Heatmap
+	};
 	QStackedWidget* m_stack = nullptr;
 
-	HistogramPlot* m_hist_a = nullptr; // page 0
-	HistogramPlot* m_hist_b = nullptr; // page 1
-	QSplitter* m_view_split = nullptr; // page 2
-	HistogramPlot* m_hist_split_a = nullptr;
-	HistogramPlot* m_hist_split_b = nullptr;
-	HistogramPlot* m_hist_sum = nullptr; // page 3
+	QSplitter* m_splitter = nullptr;   // page 0
+	HistogramPlot* m_hist_a = nullptr; // inside splitter
+	HistogramPlot* m_hist_b = nullptr; // inside splitter
+	HeatmapPlot* m_heatmap = nullptr;  // page 1 of the stack
 
 	QVector<int> m_data_a;
 	QVector<int> m_data_b;
@@ -115,12 +134,11 @@ class BeamPanel : public QWidget
 
 	QList<QToolButton*> m_view_buttons;
 	QButtonGroup* m_view_group = nullptr;
+	ViewMode m_view_mode = ViewMode::Bars;
 
 	QGroupBox* m_current_label_group = nullptr;
 	QLabel* m_current_label = nullptr;
 	QString m_center_of_gravity_text; // center of gravity
-	QString m_current_text;			  // text of the total currents
-	QString m_hover_text;			  // text of the hovered bar (empty when not hovering)
 
 	QGroupBox* m_capacitor_group = nullptr;
 	QComboBox* m_capacitor_combo_box = nullptr;
@@ -153,11 +171,12 @@ class BeamPanel : public QWidget
 	void build_layout();
 	void connect_signals();
 	void set_center_of_gravity(double a_value_a, double a_value_b);
-	void update_histograms();
-	void update_parameter_labels();
+	void update_plots();
+	void refresh_label();
 	//for histogram current axis
-	double charge_from_capacitor(Capacitor a_cap);
-	void refresh_current_label(); // helper: m_current_label->setText(current + hover)
-};
+	double charge_from_capacitor(Capacitor a_cap) const;
+	QString build_bars_text() const;
 
+	QString build_heatmap_text() const;
+};
 Q_DECLARE_METATYPE(BeamPanel::Histograms)

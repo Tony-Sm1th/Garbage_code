@@ -1,5 +1,6 @@
 #include "beam_panel.h"
 #include "histogram_plot.h"
+#include "heatmap_plot.h"
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QTextEdit>
@@ -14,9 +15,59 @@
 #include <QDebug>
 #include <QStackedWidget>
 #include <QSplitter>
+#include <QPainter>
+#include <QPixmap>
+
+static QIcon make_view_icon(int a_mode)
+{
+	const int S = 24;
+	const int margin = 3;
+	const int gap = 2;
+	const int radius = 2;
+
+	QPixmap pm(S, S);
+	pm.fill(Qt::transparent);
+
+	QPainter p(&pm);
+	p.setRenderHint(QPainter::Antialiasing);
+	p.setPen(Qt::NoPen);
+	p.setBrush(QColor(45, 90, 140)); // #2D5A8C, dark blue
+
+	const int area = S - 2 * margin;   // 18
+	const int half = (area - gap) / 2; // 8
+
+	switch(a_mode)
+	{
+		case 0: // A only
+			p.drawRoundedRect(margin, margin, area, half, radius, radius);
+			break;
+
+		case 1: // B only
+			p.drawRoundedRect(margin, margin + half + gap, area, half, radius, radius);
+			break;
+
+		case 2: // split
+			p.drawRoundedRect(margin, margin, area, half, radius, radius);
+			p.drawRoundedRect(margin, margin + half + gap, area, half, radius, radius);
+			break;
+		case 3: // sum: square with a circle in the center
+			// outer square
+			p.setBrush(QColor(45, 90, 140)); // main color
+			p.drawRoundedRect(margin, margin, area, area, radius, radius);
+
+			// inner circle (different color)
+			p.setBrush(QColor(200, 220, 240)); // light blue, or white
+			p.drawEllipse(
+				QRectF(margin + area * 0.25, margin + area * 0.25, area * 0.5, area * 0.5));
+			break;
+	}
+
+	return QIcon(pm);
+}
 
 BeamPanel::BeamPanel(QWidget* parent) : QWidget(parent)
 {
+	setMinimumWidth(MIN_PANEL_WIDTH);
 	build_ui();
 	build_layout();
 	connect_signals();
@@ -29,32 +80,26 @@ void BeamPanel::build_ui()
 	//left side
 	m_stack = new QStackedWidget(this);
 
-	// page 0: A
-	m_hist_a = new HistogramPlot(m_stack);
-	m_hist_a->setTitle(tr("View A"));
-	m_stack->addWidget(m_hist_a);
+	// page 0: splitter with A (top) and B (bottom)
+	m_splitter = new QSplitter(Qt::Vertical, m_stack);
 
-	// page 1: B
-	m_hist_b = new HistogramPlot(m_stack);
-	m_hist_b->setTitle(tr("View B"));
-	m_stack->addWidget(m_hist_b);
+	m_hist_a = new HistogramPlot(m_splitter);
+	m_hist_a->setTitle(tr("A"));
+	m_hist_b = new HistogramPlot(m_splitter);
+	m_hist_b->setTitle(tr("B"));
 
-	// page 2: split A (top) + B (bottom)
-	m_view_split = new QSplitter(Qt::Vertical, m_stack);
-	m_hist_split_a = new HistogramPlot(m_view_split);
-	m_hist_split_a->setTitle(tr("A"));
-	m_hist_split_b = new HistogramPlot(m_view_split);
-	m_hist_split_b->setTitle(tr("B"));
-	m_view_split->addWidget(m_hist_split_a);
-	m_view_split->addWidget(m_hist_split_b);
-	m_stack->addWidget(m_view_split);
+	m_splitter->addWidget(m_hist_a);
+	m_splitter->addWidget(m_hist_b);
+	m_splitter->setSizes({1, 1}); // both visible initially
 
-	// page 3: sum
-	m_hist_sum = new HistogramPlot(m_stack);
-	m_hist_sum->setTitle(tr("Sum A + B"));
-	m_stack->addWidget(m_hist_sum);
+	m_stack->addWidget(m_splitter); // page 0
 
-	m_stack->setCurrentIndex(0); // по умолчанию — view A
+	// page 1: intensity heatmap
+	m_heatmap = new HeatmapPlot(m_stack);
+	m_heatmap->setTitle(tr("Beam intensity"));
+	m_stack->addWidget(m_heatmap);
+
+	m_stack->setCurrentIndex(DEFAULT_VIEW); // по умолчанию — view A
 	//group 1: four view buttons
 	m_view_group = new QButtonGroup(this);
 	m_view_group->setExclusive(true); // only one active
@@ -62,7 +107,8 @@ void BeamPanel::build_ui()
 	for(int i = 1; i <= 4; ++i)
 	{
 		QToolButton* btn = new QToolButton(this);
-		btn->setText(QString::number(i));
+		btn->setIcon(make_view_icon(i - 1));
+		//btn->setText(QString::number(i));
 		btn->setCheckable(true);
 		btn->setAutoRaise(true);
 		btn->setFixedSize(24, 24);
@@ -70,19 +116,19 @@ void BeamPanel::build_ui()
 		m_view_group->addButton(btn, i); // add with id = i
 		m_view_buttons.append(btn);
 	}
-	m_view_buttons[0]->setChecked(true); // default button
-
+	m_view_buttons[0]->setToolTip(tr("View A"));
+	m_view_buttons[1]->setToolTip(tr("View B"));
+	m_view_buttons[2]->setToolTip(tr("Split"));
+	m_view_buttons[3]->setToolTip(tr("Intensity"));
+	m_view_buttons[DEFAULT_VIEW]->setChecked(true); // default button
 	//group 2: parameters
 	m_current_label_group = new QGroupBox(tr("Parameters"), this);
 
 	m_current_label = new QLabel(m_current_label_group);
 	m_current_label->setTextFormat(Qt::PlainText); // no HTML interpretation
 	m_current_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-	m_hover_text = QString("Position: --\n"
-						   "ADC:      --\n"
-						   "Current:  -- nA");
-	m_center_of_gravity_text = QString("COG A:	--\n"
-									   "COG B:	--\n");
+	m_center_of_gravity_text = QString("COG A: --\n"
+									   "COG B: --");
 
 	auto* current_label_layout = new QVBoxLayout(m_current_label_group);
 	current_label_layout->addWidget(m_current_label);
@@ -227,30 +273,104 @@ void BeamPanel::connect_signals()
 
 	connect(m_conversion_spin_box, qOverload<int>(&QSpinBox::valueChanged), this,
 			&BeamPanel::apply_current_scale_to_plots);
-	//hover mouse
-	auto connect_hover = [this](HistogramPlot* plot)
-	{
-		connect(plot, &HistogramPlot::bar_hovered, this, &BeamPanel::on_bar_hovered);
-		connect(plot, &HistogramPlot::bar_unhovered, this, &BeamPanel::on_bar_unhovered);
-	};
+	//hover mouse in histogram plot lambda
+	// ... existing connects ...
 
-	connect_hover(m_hist_a);
-	connect_hover(m_hist_b);
-	connect_hover(m_hist_split_a);
-	connect_hover(m_hist_split_b);
-	connect_hover(m_hist_sum);
+	connect(m_hist_a, &HistogramPlot::bar_hovered, this,
+			[this](int a_index, int, double)
+			{
+				m_hover_source = HoverSource::HistA;
+				m_hover_index = a_index;
+				refresh_label();
+			});
+
+	connect(m_hist_b, &HistogramPlot::bar_hovered, this,
+			[this](int a_index, int, double)
+			{
+				m_hover_source = HoverSource::HistB;
+				m_hover_index = a_index;
+				refresh_label();
+			});
+
+	connect(m_hist_a, &HistogramPlot::bar_unhovered, this,
+			[this]
+			{
+				if(m_hover_source == HoverSource::HistA)
+				{
+					m_hover_source = HoverSource::None;
+					m_hover_index = -1;
+					refresh_label();
+				}
+			});
+
+	connect(m_hist_b, &HistogramPlot::bar_unhovered, this,
+			[this]
+			{
+				if(m_hover_source == HoverSource::HistB)
+				{
+					m_hover_source = HoverSource::None;
+					m_hover_index = -1;
+					refresh_label();
+				}
+			});
+
+	connect(m_heatmap, &HeatmapPlot::cell_hovered, this,
+			[this](int a_ix, int a_iy, int, int, double)
+			{
+				m_hover_source = HoverSource::Heatmap;
+				m_hover_ix = a_ix;
+				m_hover_iy = a_iy;
+				refresh_label();
+			});
+
+	connect(m_heatmap, &HeatmapPlot::cell_unhovered, this,
+			[this]
+			{
+				if(m_hover_source == HoverSource::Heatmap)
+				{
+					m_hover_source = HoverSource::None;
+					m_hover_ix = -1;
+					m_hover_iy = -1;
+					refresh_label();
+				}
+			});
 }
 
 void BeamPanel::on_view_changed(int a_id)
 {
-	// std::cout << "std::cout: view changed to " << a_id << std::endl;
-	// qInfo() << "qInfo: view changed to" << a_id;
-	// qWarning() << "qWarning: view changed to" << a_id;
-	// qCritical() << "qCritical: view changed to" << a_id;
-	// qDebug() << "qDebug: view changed to" << a_id;
-	//qDebug() << QString::number(m_conversion_spin_box->value());
-	m_stack->setCurrentIndex(a_id - 1);
-	qDebug() << "view changed to" << a_id;
+	switch(a_id)
+	{
+		case 1:
+			m_view_mode = ViewMode::Bars;
+			m_stack->setCurrentIndex(0);
+			m_hist_a->show();
+			m_hist_b->hide();
+			break;
+		case 2:
+			m_view_mode = ViewMode::Bars;
+			m_stack->setCurrentIndex(0);
+			m_hist_a->hide();
+			m_hist_b->show();
+			break;
+		case 3:
+			m_view_mode = ViewMode::Bars;
+			m_stack->setCurrentIndex(0);
+			m_hist_a->show();
+			m_hist_b->show();
+			break;
+		case 4:
+			m_view_mode = ViewMode::Heatmap;
+			m_stack->setCurrentIndex(1);
+			break;
+	}
+
+	// hover from the previous mode is no longer valid
+	m_hover_source = HoverSource::None;
+	m_hover_index = -1;
+	m_hover_ix = -1;
+	m_hover_iy = -1;
+
+	refresh_label();
 }
 
 void BeamPanel::on_send_parameters_clicked()
@@ -284,14 +404,12 @@ void BeamPanel::on_noise_background_clicked()
 
 void BeamPanel::set_center_of_gravity(double a_value_a, double a_value_b)
 {
-	double cog_value_a = a_value_a;
-	double cog_value_b = a_value_b;
-	m_center_of_gravity_text = QString("COG A:	%1\n"
-									   "COG B:	%2\n")
-								   .arg(cog_value_a, 0, 'f', 3)
-								   .arg(cog_value_b, 0, 'f', 3);
+	m_center_of_gravity_text = QString("COG A: %1\n"
+									   "COG B: %2")
+								   .arg(a_value_a, 0, 'f', 3)
+								   .arg(a_value_b, 0, 'f', 3);
+	// no setText here — caller decides
 }
-
 BeamPanel::BeamParameters BeamPanel::parameters() const
 {
 	BeamParameters p;
@@ -314,22 +432,19 @@ void BeamPanel::on_histograms_ready(const Histograms& a_hist)
 	Q_ASSERT(m_data_a.size() == m_data_b.size());
 
 	const int n = m_data_a.size();
-	m_data_sum.resize(n);
-	for(int i = 0; i < n; ++i)
-		m_data_sum[i] = m_data_a[i] + m_data_b[i];
+
 	//TODO: add extra value in array
 	set_center_of_gravity(m_data_a[n - 1], m_data_b[n - 1]);
-	update_histograms();
-	update_parameter_labels();
+	update_plots();
+	// single label refresh after all data is updated
+	refresh_label();
 }
 
-void BeamPanel::update_histograms()
+void BeamPanel::update_plots()
 {
 	m_hist_a->setData(m_data_a);
 	m_hist_b->setData(m_data_b);
-	m_hist_split_a->setData(m_data_a);
-	m_hist_split_b->setData(m_data_b);
-	m_hist_sum->setData(m_data_sum);
+	m_heatmap->setData(m_data_a, m_data_b);
 }
 
 void BeamPanel::apply_current_scale_to_plots()
@@ -341,12 +456,11 @@ void BeamPanel::apply_current_scale_to_plots()
 
 	m_hist_a->setCurrentScale(charge_pC, conv_us);
 	m_hist_b->setCurrentScale(charge_pC, conv_us);
-	m_hist_split_a->setCurrentScale(charge_pC, conv_us);
-	m_hist_split_b->setCurrentScale(charge_pC, conv_us);
-	update_parameter_labels();
+	// refresh the label so the currents reflect the new scale
+	refresh_label();
 }
 
-double BeamPanel::charge_from_capacitor(Capacitor a_cap)
+double BeamPanel::charge_from_capacitor(Capacitor a_cap) const
 {
 	switch(a_cap)
 	{
@@ -362,62 +476,112 @@ double BeamPanel::charge_from_capacitor(Capacitor a_cap)
 	return 0.0;
 }
 
-void BeamPanel::update_parameter_labels()
+QString BeamPanel::build_bars_text() const
 {
 	const auto p = parameters();
 	const double Q = charge_from_capacitor(p.capacitor);
 	const double t = p.conversion_us;
 
+	// ─── currents ────────────────────────────────────────────────
+	QString current_lines;
 	if(t <= 0.0)
 	{
-		m_current_text = "I_A:   --\nI_B:   --\nI_sum: --";
-		refresh_current_label();
-		return;
+		current_lines = "I_A:   --\nI_B:   --\nI_sum: --";
+	}
+	else
+	{
+		const double k = (Q / t) * 1000.0 / (65535.0 - ADC_OFFSET_LSB);
+
+		double sum_a = 0.0, sum_b = 0.0;
+		for(int v: m_data_a)
+			sum_a += (v - ADC_OFFSET_LSB) * k;
+		for(int v: m_data_b)
+			sum_b += (v - ADC_OFFSET_LSB) * k;
+
+		current_lines = QString("I_A:   %1 nA\n"
+								"I_B:   %2 nA\n"
+								"I_sum: %3 nA")
+							.arg(sum_a, 0, 'f', 3)
+							.arg(sum_b, 0, 'f', 3)
+							.arg(sum_a + sum_b, 0, 'f', 3);
 	}
 
-	const double k_nA = (Q / t) * 1000.0 / (65535.0 - ADC_OFFSET_LSB);
+	// ─── hover: recompute from fresh data ───────────────────────
+	QString hover_lines;
 
-	double sum_a = 0.0, sum_b = 0.0;
-	for(int v: m_data_a)
-		sum_a += (v - ADC_OFFSET_LSB) * k_nA;
-	for(int v: m_data_b)
-		sum_b += (v - ADC_OFFSET_LSB) * k_nA;
+	if((m_hover_source == HoverSource::HistA || m_hover_source == HoverSource::HistB) &&
+	   m_hover_index >= 0)
+	{
+		const QVector<int>& src = (m_hover_source == HoverSource::HistA) ? m_data_a : m_data_b;
 
-	const QString text = QString("I_A:   %1 nA\n"
-								 "I_B:   %2 nA\n"
-								 "I_sum: %3 nA")
-							 .arg(sum_a, 0, 'f', 3)
-							 .arg(sum_b, 0, 'f', 3)
-							 .arg(sum_a + sum_b, 0, 'f', 3);
+		if(m_hover_index < src.size())
+		{
+			const int adc = src[m_hover_index];
+			const double k = (t > 0.0) ? (Q / t) * 1000.0 / (65535.0 - ADC_OFFSET_LSB) : 0.0;
+			const double current = (adc - ADC_OFFSET_LSB) * k;
 
-	m_current_text = text;
-	refresh_current_label();
+			hover_lines = QString("Position: %1\n"
+								  "ADC:      %2\n"
+								  "Current:  %3 nA")
+							  .arg(m_hover_index)
+							  .arg(adc)
+							  .arg(current, 0, 'f', 3);
+		}
+	}
+
+	if(hover_lines.isEmpty())
+	{
+		hover_lines = "Position: --\n"
+					  "ADC:      --\n"
+					  "Current:  -- nA";
+	}
+
+	return current_lines + "\n\n" + hover_lines + "\n\n" + m_center_of_gravity_text;
 }
 
-void BeamPanel::on_bar_hovered(int a_index, int a_adc, double a_current_nA)
+QString BeamPanel::build_heatmap_text() const
 {
-	const int pos_mm_dummy = a_index; // placeholder
+	QString hover_lines;
+	QString intensity_line;
 
-	m_hover_text = QString("Position: %1\n"
-						   "ADC:      %2\n"
-						   "Current:  %3 nA")
-					   .arg(pos_mm_dummy)
-					   .arg(a_adc)
-					   .arg(a_current_nA, 0, 'f', 3);
+	if(m_hover_source == HoverSource::Heatmap && m_hover_ix >= 0 && m_hover_ix < m_data_a.size() &&
+	   m_hover_iy >= 0 && m_hover_iy < m_data_b.size())
+	{
+		const int adc_x = m_data_a[m_hover_ix];
+		const int adc_y = m_data_b[m_hover_iy];
 
-	refresh_current_label();
+		const int max_x =
+			m_data_a.isEmpty() ? 0 : *std::max_element(m_data_a.begin(), m_data_a.end());
+		const int max_y =
+			m_data_b.isEmpty() ? 0 : *std::max_element(m_data_b.begin(), m_data_b.end());
+		const double norm = std::max(1.0, double(max_x) * double(max_y));
+		const double intensity = double(adc_x) * double(adc_y) / norm;
+
+		hover_lines = QString("X:         ch %1\n"
+							  "Y:         ch %2\n"
+							  "ADC_X:     %3\n"
+							  "ADC_Y:     %4")
+						  .arg(m_hover_ix)
+						  .arg(m_hover_iy)
+						  .arg(adc_x)
+						  .arg(adc_y);
+
+		intensity_line = QString("Intensity: %1").arg(intensity, 0, 'f', 3);
+	}
+	else
+	{
+		hover_lines = "X:         --\n"
+					  "Y:         --\n"
+					  "ADC_X:     --\n"
+					  "ADC_Y:     --";
+		intensity_line = "Intensity: --";
+	}
+
+	return hover_lines + "\n\n" + intensity_line + "\n\n" + m_center_of_gravity_text;
 }
 
-void BeamPanel::on_bar_unhovered()
+void BeamPanel::refresh_label()
 {
-	m_hover_text = QString("Position: --\n"
-						   "ADC:      --\n"
-						   "Current:  -- nA");
-	refresh_current_label();
-}
-
-void BeamPanel::refresh_current_label()
-{
-	m_current_label->setText(m_current_text + "\n\n" + m_hover_text + "\n\n" +
-							 m_center_of_gravity_text);
+	m_current_label->setText(m_view_mode == ViewMode::Bars ? build_bars_text()
+														   : build_heatmap_text());
 }

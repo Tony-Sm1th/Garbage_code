@@ -15,18 +15,21 @@ qt_add_executable(test_app
     maintab.cpp
     beam_panel.cpp
 	histogram_plot.cpp
+	heatmap_plot.cpp
 	qcustomplot.cpp
 	data_emulator.cpp
     widget.h
     maintab.h
     beam_panel.h
 	histogram_plot.h
+	heatmap_plot.h
 	qcustomplot.h
 	data_emulator.h
 
 )
 
-target_link_libraries(test_app PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::PrintSupport)
+target_link_libraries(test_app PRIVATE Qt${QT_VERSION_MAJOR}::Widgets 
+Qt${QT_VERSION_MAJOR}::PrintSupport)
 
 set_target_properties(test_app PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
