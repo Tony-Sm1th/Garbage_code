@@ -31,8 +31,8 @@ void HeatmapPlot::setup_axes()
 	m_axis_x = m_axis_rect->axis(QCPAxis::atBottom);
 	m_axis_y = m_axis_rect->axis(QCPAxis::atLeft);
 
-	m_axis_x->setLabel(tr("A channel"));
-	m_axis_y->setLabel(tr("B channel"));
+	m_axis_x->setLabel(tr("X channel"));
+	m_axis_y->setLabel(tr("Y channel"));
 
 	m_axis_x->setRange(0, 128);
 	m_axis_y->setRange(0, 128);

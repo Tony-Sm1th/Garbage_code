@@ -26,7 +26,6 @@ void HistogramPlot::setup_axes()
 
 	m_axis_right = m_axis_rect->addAxis(QCPAxis::atRight);
 	m_axis_right->setLabel(tr("Current, nA"));
-
 	// hide ticks and labels on X for now
 	//m_axis_x->setTickLabels(false);
 	auto ticker = QSharedPointer<QCPAxisTickerFixed>::create();
@@ -119,7 +118,7 @@ void HistogramPlot::update_right_axis_labels()
 	{
 		const double adc = range.lower + step * i;
 		const double current_nA = (adc - ADC_OFFSET_LSB) * m_current_k;
-		ticker->addTick(adc, QString::number(current_nA, 'f', 3));
+		ticker->addTick(adc, QString::number(current_nA, 'f', 3).rightJustified(11, ' '));
 	}
 
 	m_axis_right->setTicker(ticker);

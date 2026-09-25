@@ -106,13 +106,13 @@ class BeamPanel : public QWidget
 	enum class HoverSource
 	{
 		None,
-		HistA,
-		HistB,
+		HistX,
+		HistY,
 		Heatmap
 	};
 
 	HoverSource m_hover_source = HoverSource::None;
-	int m_hover_index = -1; // channel for HistA / HistB
+	int m_hover_index = -1; // channel for HistX / HistY
 	int m_hover_ix = -1;	// X channel for Heatmap
 	int m_hover_iy = -1;	// Y channel for Heatmap
 

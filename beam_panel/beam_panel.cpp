@@ -84,9 +84,9 @@ void BeamPanel::build_ui()
 	m_splitter = new QSplitter(Qt::Vertical, m_stack);
 
 	m_hist_a = new HistogramPlot(m_splitter);
-	m_hist_a->setTitle(tr("A"));
+	m_hist_a->setTitle(tr("X"));
 	m_hist_b = new HistogramPlot(m_splitter);
-	m_hist_b->setTitle(tr("B"));
+	m_hist_b->setTitle(tr("Y"));
 
 	m_splitter->addWidget(m_hist_a);
 	m_splitter->addWidget(m_hist_b);
@@ -116,8 +116,8 @@ void BeamPanel::build_ui()
 		m_view_group->addButton(btn, i); // add with id = i
 		m_view_buttons.append(btn);
 	}
-	m_view_buttons[0]->setToolTip(tr("View A"));
-	m_view_buttons[1]->setToolTip(tr("View B"));
+	m_view_buttons[0]->setToolTip(tr("View X"));
+	m_view_buttons[1]->setToolTip(tr("View Y"));
 	m_view_buttons[2]->setToolTip(tr("Split"));
 	m_view_buttons[3]->setToolTip(tr("Intensity"));
 	m_view_buttons[DEFAULT_VIEW]->setChecked(true); // default button
@@ -125,10 +125,15 @@ void BeamPanel::build_ui()
 	m_current_label_group = new QGroupBox(tr("Parameters"), this);
 
 	m_current_label = new QLabel(m_current_label_group);
+	QFont f = m_current_label->font();
+	f.setFamilies({"Consolas", "DejaVu Sans Mono", "Courier New", "Monospace"});
+	m_current_label->setFont(f);
 	m_current_label->setTextFormat(Qt::PlainText); // no HTML interpretation
 	m_current_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-	m_center_of_gravity_text = QString("COG A: --\n"
-									   "COG B: --");
+	m_center_of_gravity_text = QString("COG X: %1\n"
+									   "COG Y: %2")
+								   .arg(QString("--").rightJustified(9, ' '))
+								   .arg(QString("--").rightJustified(9, ' '));
 
 	auto* current_label_layout = new QVBoxLayout(m_current_label_group);
 	current_label_layout->addWidget(m_current_label);
@@ -279,7 +284,7 @@ void BeamPanel::connect_signals()
 	connect(m_hist_a, &HistogramPlot::bar_hovered, this,
 			[this](int a_index, int, double)
 			{
-				m_hover_source = HoverSource::HistA;
+				m_hover_source = HoverSource::HistX;
 				m_hover_index = a_index;
 				refresh_label();
 			});
@@ -287,7 +292,7 @@ void BeamPanel::connect_signals()
 	connect(m_hist_b, &HistogramPlot::bar_hovered, this,
 			[this](int a_index, int, double)
 			{
-				m_hover_source = HoverSource::HistB;
+				m_hover_source = HoverSource::HistY;
 				m_hover_index = a_index;
 				refresh_label();
 			});
@@ -295,7 +300,7 @@ void BeamPanel::connect_signals()
 	connect(m_hist_a, &HistogramPlot::bar_unhovered, this,
 			[this]
 			{
-				if(m_hover_source == HoverSource::HistA)
+				if(m_hover_source == HoverSource::HistX)
 				{
 					m_hover_source = HoverSource::None;
 					m_hover_index = -1;
@@ -306,7 +311,7 @@ void BeamPanel::connect_signals()
 	connect(m_hist_b, &HistogramPlot::bar_unhovered, this,
 			[this]
 			{
-				if(m_hover_source == HoverSource::HistB)
+				if(m_hover_source == HoverSource::HistY)
 				{
 					m_hover_source = HoverSource::None;
 					m_hover_index = -1;
@@ -404,12 +409,12 @@ void BeamPanel::on_noise_background_clicked()
 
 void BeamPanel::set_center_of_gravity(double a_value_a, double a_value_b)
 {
-	m_center_of_gravity_text = QString("COG A: %1\n"
-									   "COG B: %2")
-								   .arg(a_value_a, 0, 'f', 3)
-								   .arg(a_value_b, 0, 'f', 3);
-	// no setText here — caller decides
+	m_center_of_gravity_text = QString("COG X: %1\n"
+									   "COG Y: %2")
+								   .arg(QString::number(a_value_a, 'f', 3).rightJustified(9, ' '))
+								   .arg(QString::number(a_value_b, 'f', 3).rightJustified(9, ' '));
 }
+
 BeamPanel::BeamParameters BeamPanel::parameters() const
 {
 	BeamParameters p;
@@ -486,33 +491,35 @@ QString BeamPanel::build_bars_text() const
 	QString current_lines;
 	if(t <= 0.0)
 	{
-		current_lines = "I_A:   --\nI_B:   --\nI_sum: --";
+		current_lines = "Ix:        --\n"
+						"Iy:        --\n"
+						"Isum:      --";
 	}
 	else
 	{
 		const double k = (Q / t) * 1000.0 / (65535.0 - ADC_OFFSET_LSB);
 
-		double sum_a = 0.0, sum_b = 0.0;
+		double sum_x = 0.0, sum_y = 0.0;
 		for(int v: m_data_a)
-			sum_a += (v - ADC_OFFSET_LSB) * k;
+			sum_x += (v - ADC_OFFSET_LSB) * k;
 		for(int v: m_data_b)
-			sum_b += (v - ADC_OFFSET_LSB) * k;
+			sum_y += (v - ADC_OFFSET_LSB) * k;
 
-		current_lines = QString("I_A:   %1 nA\n"
-								"I_B:   %2 nA\n"
-								"I_sum: %3 nA")
-							.arg(sum_a, 0, 'f', 3)
-							.arg(sum_b, 0, 'f', 3)
-							.arg(sum_a + sum_b, 0, 'f', 3);
+		current_lines = QString("Ix:   %1 nA\n"
+								"Iy:   %2 nA\n"
+								"Isum: %3 nA")
+							.arg(QString::number(sum_x, 'f', 3).rightJustified(10, ' '))
+							.arg(QString::number(sum_y, 'f', 3).rightJustified(10, ' '))
+							.arg(QString::number(sum_x + sum_y, 'f', 3).rightJustified(10, ' '));
 	}
 
-	// ─── hover: recompute from fresh data ───────────────────────
+	// ─── hover ───────────────────────────────────────────────────
 	QString hover_lines;
 
-	if((m_hover_source == HoverSource::HistA || m_hover_source == HoverSource::HistB) &&
+	if((m_hover_source == HoverSource::HistX || m_hover_source == HoverSource::HistY) &&
 	   m_hover_index >= 0)
 	{
-		const QVector<int>& src = (m_hover_source == HoverSource::HistA) ? m_data_a : m_data_b;
+		const QVector<int>& src = (m_hover_source == HoverSource::HistX) ? m_data_a : m_data_b;
 
 		if(m_hover_index < src.size())
 		{
@@ -522,18 +529,18 @@ QString BeamPanel::build_bars_text() const
 
 			hover_lines = QString("Position: %1\n"
 								  "ADC:      %2\n"
-								  "Current:  %3 nA")
-							  .arg(m_hover_index)
-							  .arg(adc)
-							  .arg(current, 0, 'f', 3);
+								  "Current:%3 nA")
+							  .arg(QString::number(m_hover_index).rightJustified(6, ' '))
+							  .arg(QString::number(adc).rightJustified(6, ' '))
+							  .arg(QString::number(current, 'f', 3).rightJustified(8, ' '));
 		}
 	}
 
 	if(hover_lines.isEmpty())
 	{
-		hover_lines = "Position: --\n"
-					  "ADC:      --\n"
-					  "Current:  -- nA";
+		hover_lines = "Position:     --\n"
+					  "ADC:          --\n"
+					  "Current:      -- nA";
 	}
 
 	return current_lines + "\n\n" + hover_lines + "\n\n" + m_center_of_gravity_text;
@@ -557,24 +564,25 @@ QString BeamPanel::build_heatmap_text() const
 		const double norm = std::max(1.0, double(max_x) * double(max_y));
 		const double intensity = double(adc_x) * double(adc_y) / norm;
 
-		hover_lines = QString("X:         ch %1\n"
-							  "Y:         ch %2\n"
-							  "ADC_X:     %3\n"
-							  "ADC_Y:     %4")
-						  .arg(m_hover_ix)
-						  .arg(m_hover_iy)
-						  .arg(adc_x)
-						  .arg(adc_y);
+		hover_lines = QString("X:        %1\n"
+							  "Y:        %2\n"
+							  "ADC_X:    %3\n"
+							  "ADC_Y:    %4")
+						  .arg(m_hover_ix, 6)
+						  .arg(m_hover_iy, 6)
+						  .arg(adc_x, 6)
+						  .arg(adc_y, 6);
 
-		intensity_line = QString("Intensity: %1").arg(intensity, 0, 'f', 3);
+		intensity_line =
+			QString("Intensity: %1").arg(QString::number(intensity, 'f', 3).rightJustified(5, ' '));
 	}
 	else
 	{
-		hover_lines = "X:         --\n"
-					  "Y:         --\n"
-					  "ADC_X:     --\n"
-					  "ADC_Y:     --";
-		intensity_line = "Intensity: --";
+		hover_lines = "X:            --\n"
+					  "Y:            --\n"
+					  "ADC_X:        --\n"
+					  "ADC_Y:        --";
+		intensity_line = "Intensity:    --";
 	}
 
 	return hover_lines + "\n\n" + intensity_line + "\n\n" + m_center_of_gravity_text;
