@@ -72,18 +72,20 @@ void BeamPanel::build_ui()
 	}
 	m_view_buttons[0]->setChecked(true); // default button
 
-	//group 2: Center of gravity
-	m_center_of_gravity_group = new QGroupBox(tr("Parameters"), this);
+	//group 2: parameters
+	m_current_label_group = new QGroupBox(tr("Parameters"), this);
 
-	m_current_label = new QLabel(tr("--"), m_center_of_gravity_group);
+	m_current_label = new QLabel(m_current_label_group);
 	m_current_label->setTextFormat(Qt::PlainText); // no HTML interpretation
 	m_current_label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
 	m_hover_text = QString("Position: --\n"
 						   "ADC:      --\n"
 						   "Current:  -- nA");
+	m_center_of_gravity_text = QString("COG A:	--\n"
+									   "COG B:	--\n");
 
-	auto* cog_layout = new QVBoxLayout(m_center_of_gravity_group);
-	cog_layout->addWidget(m_current_label);
+	auto* current_label_layout = new QVBoxLayout(m_current_label_group);
+	current_label_layout->addWidget(m_current_label);
 
 	//group 3: Select capacitor
 	m_capacitor_group = new QGroupBox(tr("Charge in capacitor"), this);
@@ -184,7 +186,7 @@ void BeamPanel::build_layout()
 	side_layout->addSpacing(12); // fixed spacing
 
 	//group 2
-	side_layout->addWidget(m_center_of_gravity_group);
+	side_layout->addWidget(m_current_label_group);
 
 	//group 3
 	side_layout->addWidget(m_capacitor_group);
@@ -280,10 +282,14 @@ void BeamPanel::on_noise_background_clicked()
 	emit noise_accumulation_requested();
 }
 
-void BeamPanel::set_center_of_gravity(double a_value)
+void BeamPanel::set_center_of_gravity(double a_value_a, double a_value_b)
 {
-	m_cog_value = a_value;
-	m_center_of_gravity_label->setText(QString::number(m_cog_value, 'f', 2));
+	double cog_value_a = a_value_a;
+	double cog_value_b = a_value_b;
+	m_center_of_gravity_text = QString("COG A:	%1\n"
+									   "COG B:	%2\n")
+								   .arg(cog_value_a, 0, 'f', 3)
+								   .arg(cog_value_b, 0, 'f', 3);
 }
 
 BeamPanel::BeamParameters BeamPanel::parameters() const
@@ -311,7 +317,8 @@ void BeamPanel::on_histograms_ready(const Histograms& a_hist)
 	m_data_sum.resize(n);
 	for(int i = 0; i < n; ++i)
 		m_data_sum[i] = m_data_a[i] + m_data_b[i];
-
+	//TODO: add extra value in array
+	set_center_of_gravity(m_data_a[n - 1], m_data_b[n - 1]);
 	update_histograms();
 	update_parameter_labels();
 }
@@ -363,7 +370,7 @@ void BeamPanel::update_parameter_labels()
 
 	if(t <= 0.0)
 	{
-		m_current_text = "I_X:   --\nI_Y:   --\nI_sum: --";
+		m_current_text = "I_A:   --\nI_B:   --\nI_sum: --";
 		refresh_current_label();
 		return;
 	}
@@ -376,8 +383,8 @@ void BeamPanel::update_parameter_labels()
 	for(int v: m_data_b)
 		sum_b += (v - ADC_OFFSET_LSB) * k_nA;
 
-	const QString text = QString("I_X:   %1 nA\n"
-								 "I_Y:   %2 nA\n"
+	const QString text = QString("I_A:   %1 nA\n"
+								 "I_B:   %2 nA\n"
 								 "I_sum: %3 nA")
 							 .arg(sum_a, 0, 'f', 3)
 							 .arg(sum_b, 0, 'f', 3)
@@ -411,5 +418,6 @@ void BeamPanel::on_bar_unhovered()
 
 void BeamPanel::refresh_current_label()
 {
-	m_current_label->setText(m_current_text + "\n\n" + m_hover_text);
+	m_current_label->setText(m_current_text + "\n\n" + m_hover_text + "\n\n" +
+							 m_center_of_gravity_text);
 }

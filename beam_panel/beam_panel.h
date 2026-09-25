@@ -116,12 +116,11 @@ class BeamPanel : public QWidget
 	QList<QToolButton*> m_view_buttons;
 	QButtonGroup* m_view_group = nullptr;
 
-	double m_cog_value = 0.0;
-	QGroupBox* m_center_of_gravity_group = nullptr;
-	QLabel* m_center_of_gravity_label = nullptr;
+	QGroupBox* m_current_label_group = nullptr;
 	QLabel* m_current_label = nullptr;
-	QString m_current_text; // text of the total currents
-	QString m_hover_text;	// text of the hovered bar (empty when not hovering)
+	QString m_center_of_gravity_text; // center of gravity
+	QString m_current_text;			  // text of the total currents
+	QString m_hover_text;			  // text of the hovered bar (empty when not hovering)
 
 	QGroupBox* m_capacitor_group = nullptr;
 	QComboBox* m_capacitor_combo_box = nullptr;
@@ -153,7 +152,7 @@ class BeamPanel : public QWidget
 	void build_ui();
 	void build_layout();
 	void connect_signals();
-	void set_center_of_gravity(double a_value);
+	void set_center_of_gravity(double a_value_a, double a_value_b);
 	void update_histograms();
 	void update_parameter_labels();
 	//for histogram current axis
