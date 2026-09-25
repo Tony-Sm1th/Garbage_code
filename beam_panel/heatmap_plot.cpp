@@ -13,7 +13,10 @@ HeatmapPlot::HeatmapPlot(QWidget* parent) : QCustomPlot(parent)
 
 	setMinimumHeight(150);
 	setMinimumSize(150, 150);
-
+	// initialize with zeros
+	m_values_x.fill(0, 128);
+	m_values_y.fill(0, 128);
+	rebuild();
 	update_square_axis_rect();
 }
 
