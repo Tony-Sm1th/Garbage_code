@@ -393,11 +393,13 @@ void BeamPanel::on_continuous_read_toggled(bool on)
 	if(on)
 	{
 		m_reading_continuous_read_btn->setText("Stop");
+		m_reading_single_read_btn->setEnabled(false); // ← disable single read
 		emit continuous_read_requested(m_reading_spin_box->value());
 	}
 	else
 	{
 		m_reading_continuous_read_btn->setText("Start");
+		m_reading_single_read_btn->setEnabled(true); // ← enable single read
 		emit continuous_read_stopped();
 	}
 }
@@ -592,4 +594,12 @@ void BeamPanel::refresh_label()
 {
 	m_current_label->setText(m_view_mode == ViewMode::Bars ? build_bars_text()
 														   : build_heatmap_text());
+}
+
+void BeamPanel::set_ui_blocked(bool a_blocked)
+{
+	setEnabled(!a_blocked);
+
+	// optional tooltip
+	setToolTip(a_blocked ? tr("Console mode is active. Stop console to continue") : QString());
 }

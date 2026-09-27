@@ -24,6 +24,7 @@ void Widget::buildUi()
 	m_tabs->addTab(m_beam_panel_tab, tr("Beam Panel"));
 	// create the emulator (owned by this widget)
 	m_emulator = new DataEmulator(this);
+	m_beam_panel_tab->set_ui_blocked(false);
 }
 
 void Widget::buildLayout()

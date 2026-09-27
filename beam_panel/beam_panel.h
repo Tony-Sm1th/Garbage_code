@@ -90,6 +90,9 @@ class BeamPanel : public QWidget
 
   public slots:
 	void on_histograms_ready(const BeamPanel::Histograms& a_hist);
+	//block ui
+	void set_ui_blocked(bool a_blocked);
+
 	// void on_parameters_applied(const BeamPanel::BeamParameters& a_params);
 	// void on_error(const QString& a_message);
 
